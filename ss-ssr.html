@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>SS/SSR URL Encoder/Decoder</title>
+</head>
+<body>
+<h1>SS/SSR URL Encoder/Decoder</h1>
+<table width="50%"><tbody>
+<tr><th width="50%">SS/SSR URL</th></tr>
+<tr>
+<th><textarea id="base64" cols="100" rows="5" onkeyup="decodeURL();"></textarea></th>
+</tr>
+<tr>
+<td>
+<p>Convert to ss://<input id="useSS" type="checkbox" onclick="changeEncode();"></p>
+<p>&nbsp;<span id="warning" style="color: red;"></span></p>
+<table width="100%"><tbody>
+<tr>
+<td width="20%">Host:</td>
+<td><input type="text" id="host" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Port:</td>
+<td><input type="text" id="port" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Password:</td>
+<td><input type="text" id="password" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Method:</td>
+<td><input type="text" id="method" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Protocol:</td>
+<td><input type="text" id="protocol" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Protocol Parameters:</td>
+<td><input type="text" id="protoparam" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Obfuscation:</td>
+<td><input type="text" id="obfuscation" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Obfuscation Parameters:</td>
+<td><input type="text" id="obfsparam" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Remarks:</td>
+<td><input type="text" id="remarks" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>Group:</td>
+<td><input type="text" id="group" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>UDP Port:</td>
+<td><input type="text" id="udpport" size="50" onkeyup="encodeURL();"></td>
+</tr>
+<tr>
+<td>UDP Over TCP:</td>
+<td><input type="checkbox" id="uot" onclick="encodeURL();"></td>
+</tr>
+</tbody>
+</td>
+</tr>
+</tbody></table>
+
+<script src="./base64.js"></script>
+<script>
+$ = function(id) { return document.getElementById(id) };
+var useSSR = true;
+function decodeURL() {
+    var url = $('base64').value;
+    var isSsr;
+    clear();
+    $('warning').innerText = '';
+    if (url.startWith('ssr://')) {
+        isSsr = true;
+        url = url.substr(6);
+    } else if (url.startWith('ss://')) {
+        isSsr = false;
+        url = url.substr(5);
+    } else {
+        return;
+    }
+    var decoded;
+    try {
+        decoded = Base64.decode(url);
+    } catch {
+        $('warning').innerText = 'ERROR when decoding!';
+        return;
+    }
+    if (isSsr) {
+        try {
+            var sp = decoded.split('/?');
+            var in1 = sp[0].split(':');
+            var in2 = sp[1].split('&');
+            $('host').value = in1[0];
+            $('port').value = in1[1];
+            $('protocol').value = in1[2] == '' ? 'origin' : in1[2];
+            $('method').value = in1[3];
+            $('obfuscation').value = in1[4];
+            $('password').value = Base64.decode(in1[5]);
+            for (var i = 0; i < in2.length; i++) {
+                var tmp = in2[i].split('=');
+                if (tmp[1] == '') continue;
+                if (tmp[0] != 'uot' && tmp[0] != 'udpport') {
+                    $(tmp[0]).value = Base64.decode(tmp[1]);
+                } else if (tmp[0] == 'uot') {
+                	$(tmp[0]).checked = tmp[1] == '0' ? '' : 'checked';
+                } else {
+                	$(tmp[0]).value = tmp[1];
+                }
+            }
+        } catch {
+            $('warning').innerText = 'ERROR when parsing!';
+        }
+    } else {
+        try {
+            var sp1 = decoded.substr(0, decoded.lastIndexOf('@'));
+            var sp2 = decoded.substr(decoded.lastIndexOf('@') + 1);
+            $('method').value = sp1.split(':', 1);
+            $('password').value = sp1.substr(sp1.indexOf(':') + 1);
+            $('host').value = sp2.substr(0, sp2.lastIndexOf(':'));
+            $('port').value = sp2.substr(sp2.lastIndexOf(':') + 1);
+        } catch {
+            $('warning').innerText = 'ERROR when parsing!';
+        }
+    }
+}
+function encodeURL() {
+    poCheck();
+    var urlString = '';
+    if (useSSR) {
+        try {
+            var arr1 = new Array();
+            arr1.push($('host').value);
+            arr1.push($('port').value);
+            arr1.push($('protocol').value);
+            arr1.push($('method').value);
+            arr1.push($('obfuscation').value);
+            arr1.push(Base64.encodeURI($('password').value));
+            var arr2 = new Array();
+            if ($('obfsparam').value != '') {
+                arr2.push('obfsparam=' + Base64.encodeURI($('obfsparam').value));
+            }
+            if ($('protoparam').value != '') {
+                arr2.push('protoparam=' + Base64.encodeURI($('protoparam').value));
+            }
+            if ($('remarks').value != '') {
+                arr2.push('remarks=' + Base64.encodeURI($('remarks').value));
+            }
+            if ($('group').value != '') {
+                arr2.push('group=' + Base64.encodeURI($('group').value));
+            }
+            if ($('udpport').value != '') {
+            	arr2.push('udpport=' + $('udpport').value);
+            	arr2.push('uot=' + ($('uot').checked ? '1' : '0'));
+            }
+            urlString = arr1.join(':') + '/?' + arr2.join('&');
+        } catch {
+            $('warning').innerText = 'ERROR when concatenating!';
+        }
+    } else {
+        try {
+            urlString = $('method').value + ':' + $('password').value + '@' +
+                $('host').value + ':' + $('port').value;
+        } catch {
+            $('warning').innerText = 'ERROR when concatenating!';
+        }
+    }
+    var encoded = '';
+    if (urlString != '') {
+        try {
+            encoded = Base64.encodeURI(urlString);
+        } catch {
+            $('warning').innerText = 'ERROR when encoding!';
+        }
+    }
+    if (useSSR) {
+        $('base64').value = 'ssr://' + encoded;
+    } else {
+        $('base64').value = 'ss://' + encoded;
+    }
+}
+function changeEncode() {
+    useSSR = !$('useSS').checked;
+    encodeURL();
+}
+function clear() {
+    $('host').value = '';
+    $('port').value = '';
+    $('password').value = '';
+    $('method').value = 'none';
+    $('protocol').value = 'origin';
+    $('protoparam').value = '';
+    $('obfuscation').value = 'plain';
+    $('obfsparam').value = '';
+    $('remarks').value = '';
+    $('group').value = '';
+}
+function poCheck() {
+	if ($('method').value == '') {
+		$('method').value = 'none';
+	}
+    if ($('protocol').value == '') {
+        $('protocol').value = 'origin';
+    }
+    if ($('obfuscation').value == '') {
+        $('obfuscation').value = 'plain';
+    }
+}
+String.prototype.startWith = function(str){
+    var reg=new RegExp("^"+str);
+    return reg.test(this);
+}
+</script>
+</body>
+</html>
